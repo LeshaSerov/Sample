@@ -10,6 +10,7 @@ import lombok.ToString;
 public class MemberData {
     private State state;
     private Integer idMessage = null;
+    private Long idChat = null;
     private Integer idGroup = null;
     private Integer idCategory = null;
     private Long idMember = null;
@@ -17,6 +18,7 @@ public class MemberData {
 
     public enum TypeReceivedInformation{
         IdMessage,
+        IdChat,
         IdGroup,
         IdCategory,
         IdMember,
@@ -26,6 +28,7 @@ public class MemberData {
         switch (type)
         {
             case IdMessage -> idMessage = Integer.valueOf(x);
+            case IdChat -> idChat = Long.valueOf(x);
             case IdGroup -> idGroup = Integer.valueOf(x);
             case IdCategory -> idCategory = Integer.valueOf(x);
             case IdMember -> idMember = Long.valueOf(x);

@@ -45,11 +45,26 @@ public class StateMachine
         currentState.addPath(new State(name,description,nameButton,currentState));
         return this;
     }
+    public StateMachine addPath(String name, Function<State.Data, String> description, String nameButton){
+        currentState.addPath(new State(name,null, nameButton, currentState));
+        currentState.next(name).setOperatorWhoGeneratesDescription(description);
+        currentState.previous();
+        return this;
+    }
 
     public StateMachine addPathProcessesMessages(Function<State.Data, List<BaseRequest>> operator,
                                                  String name, String description, String nameButton){
         currentState.addPath(new State(name, description,nameButton, currentState));
         next(name);
+        currentState.setOperatorWhoProcessesMessages(operator);
+        previous();
+        return this;
+    }
+    public StateMachine addPathProcessesMessages(Function<State.Data, List<BaseRequest>> operator,
+                                                 String name, Function<State.Data, String> description, String nameButton){
+        currentState.addPath(new State(name, null, nameButton, currentState));
+        next(name);
+        currentState.setOperatorWhoGeneratesDescription(description);
         currentState.setOperatorWhoProcessesMessages(operator);
         previous();
         return this;
@@ -74,6 +89,20 @@ public class StateMachine
         previous();
         return this;
     }
+    public StateMachine addPathGenerateKeyboard(String nameState, String descriptionState, String nameButtonState,
+                                                Function<State.Data,  List<Pair<String, String>>> operator,
+                                                MemberData.TypeReceivedInformation type,
+                                                String nameNewState, Function<State.Data, String> description){
+        currentState.addPath(new State(nameState,descriptionState,nameButtonState,currentState));
+        next(nameState);
+        currentState.addGenerateKeyboard(operator, type, new State(nameNewState,null,null, currentState));
+        next(nameNewState);
+        currentState.setOperatorWhoGeneratesDescription(description);
+        previous();
+        previous();
+        return this;
+    }
+
 
     public StateMachine relocationPathInPathGenerateKeyboard(String nameState, String descriptionState, String nameButtonState,
                                                              Function<State.Data,  List<Pair<String, String>>> operator,

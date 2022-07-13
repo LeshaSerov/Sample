@@ -5,8 +5,6 @@ import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.BaseRequest;
 import kotlin.Pair;
 import lombok.*;
-import telegram.Bot;
-import util.ConnectionPool.ConnectionPool;
 
 import java.util.List;
 import java.util.Objects;
@@ -40,13 +38,15 @@ public class State {
         Long idThisMember;
         MemberData data;
         Update update;
-        ConnectionPool connector;
+        //Пул соединений к бд
+        //ConnectionPool connector;
         TelegramBot bot;
     }
     private Function<Data, List<BaseRequest>> operatorWhichRunsAtStartup = null;
     private Function<Data, List<BaseRequest>> operatorWhoProcessesMessages = null;
     private Function<Data,  List<Pair<String, String>>> operatorWhichGeneratesKeyboard = null;
     private MemberData.TypeReceivedInformation type = null;
+    private Function<Data, String> operatorWhoGeneratesDescription = null;
     public void addGenerateKeyboard(Function<Data,  List<Pair<String, String>>> operator, MemberData.TypeReceivedInformation type, State stateNext) {
         this.operatorWhichGeneratesKeyboard = operator;
         this.type = type;

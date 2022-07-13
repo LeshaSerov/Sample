@@ -8,20 +8,16 @@ import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.request.*;
 import com.pengrad.telegrambot.response.SendResponse;
 import kotlin.Pair;
-import repository.dao.ChatDao;
-import repository.dao.MemberDao;
 import telegram.Events.HandlerCommands;
 import telegram.Events.HandlerEventsInGroups;
 import telegram.Events.HandlerEventsModifyRightsBot;
 import telegram.domain.MemberData;
 import telegram.domain.State;
-import util.ConnectionPool.ConnectionPool;
 
 import java.util.*;
 
 public class Bot {
     private final TelegramBot bot = new TelegramBot("5428762622:AAFLX4ciGwUfxrifpl5fLyqec3UsbqIAReg");
-    private final ConnectionPool connector = new ConnectionPool();
     private final Map<Long, MemberData> controllerStates = new HashMap<Long, MemberData>();
     private final State stateDefault = Initiator.initializeDefaultState();
 
@@ -41,10 +37,10 @@ public class Bot {
             InformantUpdate informant = definitionIdAndTypeUpdate(update);
 
             switch (informant.type) {
-                case MyChatMember -> requests.add(HandlerEventsModifyRightsBot.process(update.myChatMember(), connector));
+                case MyChatMember -> requests.add(HandlerEventsModifyRightsBot.process(update.myChatMember()));
                 case Message -> {
-                    requests.add(HandlerEventsInGroups.process(update.message(), connector));
-                    requests.add(HandlerCommands.process(update.message(), connector));
+                    requests.add(HandlerEventsInGroups.process(update.message()));
+                    requests.add(HandlerCommands.process(update.message()));
                 }
             }
 
@@ -66,17 +62,18 @@ public class Bot {
                 if (informant.type == TypeUpdate.Message) {
                     Message message = update.message();
 
-                    if (message.text().startsWith("/default")) {
-                        User user =  message.from();
-                        new MemberDao().addMember(user.id(), user.firstName(), user.lastName(), user.username(), connector);
+                    if (message.text() != null && message.text().startsWith("/default")) {
+                        User user = message.from();
+
+                        //new MemberDao().addMember(user.id(), user.firstName(), user.lastName(), user.username());
                         controllerStates.put(informant.idMember, new MemberData(stateDefault));
-                    } else if (message.text().startsWith("/exit")) {
+                    } else if (message.text() != null && message.text().startsWith("/exit")) {
                         controllerStates.remove(informant.idMember);
 
                     } else if (vaultState != null && vaultState.getOperatorWhoProcessesMessages() != null) {
                         requests.addAll(vaultState.getOperatorWhoProcessesMessages()
                                 .apply(new State.Data
-                                        (informant.idMember, vault, update, connector, bot)));
+                                        (informant.idMember, vault, update, bot)));
                         //Переход обратно, если конечный этап.
                         if (vaultState.getStateNext() == null && vaultState.getPaths().isEmpty()) {
                             vault.setState(vaultState.previous());
@@ -101,8 +98,7 @@ public class Bot {
                             if (vaultState.getOperatorWhichGeneratesKeyboard() != null) {
                                 vault.addInfo(vaultState.getType(), text);
                                 stateNext = vaultState.getStateNext();
-                            }
-                            else {
+                            } else {
                                 stateNext = vaultState.getPaths()
                                         .stream()
                                         .filter(element -> Objects.equals(element.getName(), text))
@@ -117,7 +113,7 @@ public class Bot {
                                 //Специальный метод - запускаемый при запуске - конкретную реализацию необходимо создавать отдельно
                                 requests.addAll(vaultState.getOperatorWhichRunsAtStartup()
                                         .apply(new State.Data
-                                                (informant.idMember, vault, update, connector, bot)));
+                                                (informant.idMember, vault, update, bot)));
                                 //Переход обратно, если конечный этап.
                                 if (vaultState.getStateNext() == null && vaultState.getPaths().isEmpty()) {
                                     vault.setState(vaultState.previous());
@@ -125,15 +121,15 @@ public class Bot {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     System.out.println("Неизвестный Update");
                 }
-            }
-            else if (informant.type == TypeUpdate.Message){
-                User user =  update.message().from();
-                new MemberDao().addMember(user.id(), user.firstName(), user.lastName(), user.username(), connector);
-                new ChatDao().addChat(update.message().chat().id(), update.message().chat().title(), connector);
+                //TODO: Удалить эту часть кода - но не понятно может и работает
+            } else if (informant.type == TypeUpdate.Message) {
+                //Добавление чата и пользователя в бд
+                User user = update.message().from();
+                //new MemberDao().addMember(user.id(), user.firstName(), user.lastName(), user.username(), connector);
+                //new ChatDao().addChat(update.message().chat().id(), update.message().chat().title(), connector);
             }
 
             //Генерация Сообщений С клавиатурами
@@ -141,26 +137,39 @@ public class Bot {
             if (vault != null) {
                 State vaultState = vault.getState();
                 //Создание клавиатуры специальным методом
-                InlineKeyboardMarkup inlineKeyboardMarkup = GenerationKeyboard(informant.idMember,vault,update,connector);
+                String description = vaultState.getDescription();
+                if (vaultState.getOperatorWhoGeneratesDescription() != null)
+                    description = vaultState.getOperatorWhoGeneratesDescription().apply(
+                            new State.Data(informant.idMember, vault, update, bot)
+                    );
+                InlineKeyboardMarkup inlineKeyboardMarkup = GenerationKeyboard(informant.idMember, vault, update);
                 if (vault.getIdMessage() == null) {
-                    SendResponse response = bot.execute(new SendMessage(informant.idChat, vaultState.getDescription()).replyMarkup(inlineKeyboardMarkup));
+                    SendResponse response = bot.execute(new SendMessage(informant.idChat, description).replyMarkup(inlineKeyboardMarkup));
                     vault.setIdMessage(response.message().messageId());
-                }
-                else {
+                } else {
                     requests.add(new EditMessageText(informant.idChat, vault.getIdMessage(), vaultState.getDescription()));
                     requests.add(new EditMessageReplyMarkup(informant.idChat, vault.getIdMessage()).replyMarkup(inlineKeyboardMarkup));
                 }
             }
 
             for (BaseRequest x : requests) {
-                if (x != null)
+                if (x != null) {
                     bot.execute(x);
+                    //            new Thread(() -> {
+//                try {
+//                    TimeUnit.SECONDS.sleep(25);
+//
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }).start();
+                }
             }
 
         } catch (RuntimeException e) {
             //System.out.println("Ошибка CallbackQuery");
             if (update.callbackQuery() != null)
-                bot.execute(new AnswerCallbackQuery( update.callbackQuery().id() ).text("Ошибка обработки нажатия кнопки").showAlert(true));
+                bot.execute(new AnswerCallbackQuery(update.callbackQuery().id()).text("Ошибка обработки нажатия кнопки").showAlert(true));
             else
                 bot.execute(new SendMessage(update.message().chat().id(), "Ошибка обработки текста"));
         } catch (Exception e) {
@@ -194,8 +203,7 @@ public class Bot {
             informant.idChat = message.chat().id();
             informant.idMessage = message.messageId();
             informant.type = TypeUpdate.Message;
-        }else
-        {
+        } else {
             informant.idMember = null;
             informant.idChat = null;
             informant.idMessage = null;
@@ -204,13 +212,13 @@ public class Bot {
         return informant;
     }
 
-    private InlineKeyboardMarkup GenerationKeyboard(Long idMember, MemberData data, Update update, ConnectionPool connector) {
+    private InlineKeyboardMarkup GenerationKeyboard(Long idMember, MemberData data, Update update) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         if (data.getState().getOperatorWhichGeneratesKeyboard() != null) {
             //GenerationButton
             List<Pair<String, String>> ListButtons = data.getState().getOperatorWhichGeneratesKeyboard()
                     .apply(new State.Data
-                            (idMember, data, update, connector, bot));
+                            (idMember, data, update, bot));
             for (Pair<String, String> x : ListButtons) {
                 inlineKeyboardMarkup.addRow(
                         new InlineKeyboardButton(

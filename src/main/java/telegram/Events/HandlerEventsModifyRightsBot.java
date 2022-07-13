@@ -5,13 +5,11 @@ import com.pengrad.telegrambot.model.ChatMember;
 import com.pengrad.telegrambot.model.ChatMemberUpdated;
 import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendMessage;
-import repository.dao.ChatDao;
-import util.ConnectionPool.ConnectionPool;
 
 import static java.lang.Long.parseLong;
 
 public class HandlerEventsModifyRightsBot {
-    public static BaseRequest process(ChatMemberUpdated myChatMember, ConnectionPool connector) {
+    public static BaseRequest process(ChatMemberUpdated myChatMember) {
         SendMessage request = null;
 
         Chat chat = myChatMember.chat();
@@ -25,7 +23,7 @@ public class HandlerEventsModifyRightsBot {
         ChatMember.Status statusAdministrator = ChatMember.Status.administrator;
 
         if (status == statusKick) {
-            DeleteChat(chat, connector);
+            DeleteChat(chat);
         } else if (status == statusMember) {
             answer = """
                     Привет)
@@ -33,7 +31,7 @@ public class HandlerEventsModifyRightsBot {
                     иначе я не смогу работать в этом чате.""";
             request = new SendMessage(chat_id, answer);
         } else if (status == statusAdministrator) {
-            AddChat(chat, connector);
+            AddChat(chat);
             answer = """
                     Привет)
                     Я Помощник.
@@ -44,17 +42,19 @@ public class HandlerEventsModifyRightsBot {
         return request;
     }
 
-    private static void AddChat(Chat chat, ConnectionPool connector) {
+
+    //Эти методы добавляли данные о чатах в бд
+    private static void AddChat(Chat chat) {
         try {
             Long chat_id = parseLong(chat.id().toString());
-            new ChatDao().addChat(chat_id, chat.title(), connector);
+            //new ChatDao().addChat(chat_id, chat.title(), connector);
         } catch (Exception ignored) {
         }
     }
 
-    private static void DeleteChat(Chat chat, ConnectionPool connector) {
+    private static void DeleteChat(Chat chat) {
         try {
-            new ChatDao().deleteChat(chat.id(), connector);
+            //new ChatDao().deleteChat(chat.id(), connector);
         } catch (Exception ignored) {
         }
     }
