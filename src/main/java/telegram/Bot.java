@@ -17,7 +17,7 @@ import telegram.domain.State;
 import java.util.*;
 
 public class Bot {
-    private final TelegramBot bot = new TelegramBot("");
+    private final TelegramBot bot = new TelegramBot("5428762622:AAFLX4ciGwUfxrifpl5fLyqec3UsbqIAReg");
     private final Map<Long, MemberData> controllerStates = new HashMap<Long, MemberData>();
     private final State stateDefault = Initiator.initializeDefaultState();
 
@@ -25,10 +25,17 @@ public class Bot {
         //Initiator.reset(connector);
         System.out.println("Start");
         bot.setUpdatesListener(updates -> {
-            updates.forEach(this::process);
+            updates.forEach(x -> new Thread(() ->{process(x);}).start());
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
     }
+
+//            Другой вариант - все тоже самое только другими инструментами.
+//            for(Update x: updates){
+//                    new Thread(() ->{
+//                        process(x);
+//                    }).start();
+//            }
 
     private void process(Update update) {
         try {
@@ -158,22 +165,17 @@ public class Bot {
                     SendResponse response = bot.execute(new SendMessage(informant.idChat, description).replyMarkup(inlineKeyboardMarkup));
                     vault.setIdMessage(response.message().messageId());
                 } else {
-                    requests.add(new EditMessageText(informant.idChat, vault.getIdMessage(), vaultState.getDescription()));
-                    requests.add(new EditMessageReplyMarkup(informant.idChat, vault.getIdMessage()).replyMarkup(inlineKeyboardMarkup));
+                    requests.add(new EditMessageText(informant.idChat, vault.getIdMessage(), vaultState.getDescription()).replyMarkup(inlineKeyboardMarkup));
                 }
             }
 
             for (BaseRequest x : requests) {
                 if (x != null) {
+                    long start = System.currentTimeMillis();
                     bot.execute(x);
-                    //            new Thread(() -> {
-//                try {
-//                    TimeUnit.SECONDS.sleep(25);
-//
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            }).start();
+                    long finish = System.currentTimeMillis();
+                    long elapsed = finish - start;
+                    System.out.println("Прошло времени, мс: " + elapsed + " " + x.getMethod());
                 }
             }
 
