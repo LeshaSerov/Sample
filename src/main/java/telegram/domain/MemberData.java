@@ -9,12 +9,17 @@ import lombok.ToString;
 @ToString
 public class MemberData {
     private State state;
+
+    private Integer NumberSublist = 0;
+    private State previousStateGenerateKeyboard = null;
+
     private Integer idMessage = null;
     private Long idChat = null;
     private Integer idGroup = null;
     private Integer idCategory = null;
     private Long idMember = null;
     private Integer idRole = null;
+    private Integer idFile = null;
 
     public enum TypeReceivedInformation{
         IdMessage,
@@ -22,7 +27,8 @@ public class MemberData {
         IdGroup,
         IdCategory,
         IdMember,
-        IdRole
+        IdRole,
+        IdFile
     }
     public void addInfo(TypeReceivedInformation type, String x){
         switch (type)
@@ -33,6 +39,7 @@ public class MemberData {
             case IdCategory -> idCategory = Integer.valueOf(x);
             case IdMember -> idMember = Long.valueOf(x);
             case IdRole -> idRole = Integer.valueOf(x);
+            case IdFile -> idFile = Integer.valueOf(x);
         }
     }
 

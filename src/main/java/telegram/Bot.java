@@ -17,7 +17,7 @@ import telegram.domain.State;
 import java.util.*;
 
 public class Bot {
-    private final TelegramBot bot = new TelegramBot("5428762622:AAFLX4ciGwUfxrifpl5fLyqec3UsbqIAReg");
+    private final TelegramBot bot = new TelegramBot("");
     private final Map<Long, MemberData> controllerStates = new HashMap<Long, MemberData>();
     private final State stateDefault = Initiator.initializeDefaultState();
 
@@ -90,9 +90,20 @@ public class Bot {
                         //Переход в следующее состояние
                     else {
                         if (Objects.equals(text, "Назад")) {
+                            if (vaultState.getOperatorWhichGeneratesKeyboard() != null){
+                                vault.setPreviousStateGenerateKeyboard(null);
+                                vault.setNumberSublist(0);
+                            }
                             vault.setState(vaultState.previous());
-                        } else {
-
+                        } else if (Objects.equals(text, "⬅⬅⬅")) {
+                            vault.setNumberSublist(vault.getNumberSublist() - 1);
+                        } else if (Objects.equals(text, "➡➡➡")) {
+                            vault.setNumberSublist(vault.getNumberSublist() + 1);
+                        } else if (Objects.equals(text, "Int/Int")) {
+                            requests.add(new AnswerCallbackQuery(update.callbackQuery().id())
+                                    .text("Делать больше нечего?))")
+                                    .showAlert(true));
+                        }else {
                             State stateNext = null;
                             //Сохранение данных с кнопки, которую только что нажали
                             if (vaultState.getOperatorWhichGeneratesKeyboard() != null) {
@@ -216,15 +227,56 @@ public class Bot {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         if (data.getState().getOperatorWhichGeneratesKeyboard() != null) {
             //GenerationButton
-            List<Pair<String, String>> ListButtons = data.getState().getOperatorWhichGeneratesKeyboard()
-                    .apply(new State.Data
-                            (idMember, data, update, bot));
-            for (Pair<String, String> x : ListButtons) {
-                inlineKeyboardMarkup.addRow(
-                        new InlineKeyboardButton(
-                                x.component2()
-                        ).callbackData(x.component1()));
+            if (data.getPreviousStateGenerateKeyboard() != data.getState())
+                data.setNumberSublist(0);
+            data.setPreviousStateGenerateKeyboard(data.getState());
+            List<Pair<String, String>> ListResult = data.getState().getOperatorWhichGeneratesKeyboard()
+                    .apply(new State.Data(idMember, data, update, bot));
+
+            //Подсписок из результата 8 элементов
+            //Так же тут определяется наличие кнопок
+            //для перехода влево и вправо
+            // - для перемещения по списку.
+
+            int divider = 8;
+
+            List <Pair<String,String>> ListButtons = null;
+            int size = ListResult.size();
+
+            int countSubLists = size / divider;
+            if (countSubLists % divider > 0)
+                countSubLists = countSubLists + 1;
+
+            Integer numberSubList = data.getNumberSublist();
+            if (numberSubList == -1) {
+                numberSubList = countSubLists - 2;
+                data.setNumberSublist(numberSubList);
             }
+            else if (countSubLists - 1 < numberSubList)  {
+                numberSubList = numberSubList - countSubLists;
+                data.setNumberSublist(numberSubList);
+            }
+
+            if (size <= divider) {
+                ListButtons = ListResult;
+                data.setNumberSublist(0);
+            }else if (numberSubList != countSubLists - 1) {
+                ListButtons = ListResult.subList(numberSubList * divider, (numberSubList + 1) * divider);
+            }else {
+                ListButtons = ListResult.subList(numberSubList * divider, size);
+            }
+
+            for (Pair<String, String> x : ListButtons) {
+                inlineKeyboardMarkup.addRow(new InlineKeyboardButton(x.component2())
+                        .callbackData(x.component1()));
+            }
+            if (countSubLists > 0)
+                inlineKeyboardMarkup.addRow(
+                        new InlineKeyboardButton("⬅").callbackData("⬅⬅⬅"),
+                        new InlineKeyboardButton(numberSubList + "/" + countSubLists).callbackData("Int/Int"),
+                        new InlineKeyboardButton("➡").callbackData("➡➡➡")
+                );
+
         } else {
             for (State element :
                     data.getState().getPaths()) {
