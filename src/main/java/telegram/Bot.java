@@ -249,7 +249,7 @@ public class Bot {
 
             Integer numberSubList = data.getNumberSublist();
             if (numberSubList == -1) {
-                numberSubList = countSubLists - 2;
+                numberSubList = countSubLists - 1;
                 data.setNumberSublist(numberSubList);
             }
             else if (countSubLists - 1 < numberSubList)  {
@@ -273,7 +273,7 @@ public class Bot {
             if (countSubLists > 0)
                 inlineKeyboardMarkup.addRow(
                         new InlineKeyboardButton("⬅").callbackData("⬅⬅⬅"),
-                        new InlineKeyboardButton(numberSubList + "/" + countSubLists).callbackData("Int/Int"),
+                        new InlineKeyboardButton((numberSubList + 1) + "/" + countSubLists).callbackData("Int/Int"),
                         new InlineKeyboardButton("➡").callbackData("➡➡➡")
                 );
 

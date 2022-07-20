@@ -1,8 +1,15 @@
 package telegram;
 
+import kotlin.Pair;
+import telegram.domain.MemberData;
 import telegram.domain.State;
 import telegram.domain.StateMachine;
+import telegram.operators.OperatorsWhichGeneratesKeyboard;
 import telegram.operators.OperatorsWhoProcessesMessages;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
 
 public class Initiator {
 
@@ -11,6 +18,16 @@ public class Initiator {
         StateMachine stateMachine = new StateMachine(
                 "Default",
                 "Стандартное состояние"
+        );
+
+        stateMachine.addPathGenerateKeyboard(
+                "ListGroup",
+                "Выберите группу из списка",
+                "Список Групп",
+                Initiator::keyboard,
+                MemberData.TypeReceivedInformation.IdGroup,
+                "Группа",
+                ""
         );
 
 //        stateMachine.addPathProcessesMessages(
@@ -256,5 +273,14 @@ public class Initiator {
 //        }
 
         return stateMachine.getDefaultState();
+    }
+
+    private static List<Pair<String, String>> keyboard(State.Data data){
+        List<Pair<String, String>> result = new ArrayList<>();
+        for (Integer i = 0; i < 42; i++)
+        {
+            result.add(new Pair<String, String>(i.toString() ,i.toString()));
+        }
+        return result;
     }
 }
